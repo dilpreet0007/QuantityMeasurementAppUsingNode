@@ -12,7 +12,6 @@ const {
 async function convertQuantity(req, res) {
 
     try {
-
         const { type, value, fromUnit, toUnit } = req.body;
 
         const result = performConversion(
