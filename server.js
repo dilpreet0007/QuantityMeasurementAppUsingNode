@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/api/quantity', quantityRoutes);
+app.use('/api/v1/quantities', quantityRoutes);
 
 app.get('/', (req, res) => {
     res.send('Quantity Measurement API Running');
