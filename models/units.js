@@ -1,25 +1,32 @@
-const LENGTH_UNITS = {
-    meter: 1,
-    centimeter: 0.01,
-    kilometer: 1000,
-    foot: 0.3048,
-    inch: 0.0254
+const LengthUnit = {
+    INCHES: 1.0,
+    FEET: 12.0,
+    YARDS: 36.0,
+    CENTIMETERS: 1.0 / 2.54
 };
 
-const WEIGHT_UNITS = {
-    gram: 1,
-    kilogram: 1000,
-    pound: 453.592
+const VolumeUnit = {
+    LITRE: 1.0,
+    MILLILITER: 0.001,
+    GALLON: 3.78541
 };
 
-const VOLUME_UNITS = {
-    liter: 1,
-    milliliter: 0.001,
-    gallon: 3.78541
+const WeightUnit = {
+    GRAM: 1.0,
+    KILOGRAM: 1000.0,
+    MILLIGRAM: 0.001,
+    POUND: 453.592,
+    TONNE: 1000000.0
+};
+
+const TemperatureUnit = {
+    CELSIUS: 'CELSIUS',
+    FAHRENHEIT: 'FAHRENHEIT'
 };
 
 module.exports = {
-    LENGTH_UNITS,
-    WEIGHT_UNITS,
-    VOLUME_UNITS
+    LengthUnit,
+    VolumeUnit,
+    WeightUnit,
+    TemperatureUnit
 };
