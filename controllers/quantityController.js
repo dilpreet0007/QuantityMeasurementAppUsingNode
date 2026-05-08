@@ -1,142 +1,216 @@
-const {
-    performConversion,
-    addValues,
-    subtractValues
-} = require('../services/quantityService');
+const quantityService = require('../services/quantityService');
 
 const {
     saveMeasurement,
-    getAllMeasurements
+    getAllMeasurements,
+    getOperationHistory,
+    getMeasurementsByType,
+    getOperationCount,
+    getErrorHistory
 } = require('../models/quantityModel');
 
-async function convertQuantity(req, res) {
+function buildSuccessRecord(operation, input, result, resultText = null) {
+    return {
+        operation,
 
+        this_value: input.thisQuantityDTO.value,
+        this_unit: input.thisQuantityDTO.unit,
+        this_measurement_type: input.thisQuantityDTO.measurementType,
+
+        that_value: input.thatQuantityDTO.value,
+        that_unit: input.thatQuantityDTO.unit,
+        that_measurement_type: input.thatQuantityDTO.measurementType,
+
+        result_value: result ? result.value : null,
+        result_unit: result ? result.unit : null,
+        result_measurement_type: result ? result.measurementType : null,
+        result_text: resultText,
+
+        is_error: false,
+        error_message: null
+    };
+}
+
+function buildErrorRecord(operation, input, errorMessage) {
+    return {
+        operation,
+
+        this_value: input?.thisQuantityDTO?.value || null,
+        this_unit: input?.thisQuantityDTO?.unit || null,
+        this_measurement_type: input?.thisQuantityDTO?.measurementType || null,
+
+        that_value: input?.thatQuantityDTO?.value || null,
+        that_unit: input?.thatQuantityDTO?.unit || null,
+        that_measurement_type: input?.thatQuantityDTO?.measurementType || null,
+
+        result_value: null,
+        result_unit: null,
+        result_measurement_type: null,
+        result_text: null,
+
+        is_error: true,
+        error_message: errorMessage
+    };
+}
+
+async function handleOperation(req, res, operation, serviceFunction) {
     try {
-        const { type, value, fromUnit, toUnit } = req.body;
+        const input = req.body;
 
-        const result = performConversion(
-            type,
-            value,
-            fromUnit,
-            toUnit
+        const result = serviceFunction(input);
+
+        let resultText = null;
+
+        if (operation === 'COMPARE') {
+            resultText = result.resultText;
+        }
+
+        await saveMeasurement(
+            buildSuccessRecord(
+                operation,
+                input,
+                operation === 'COMPARE' ? null : result,
+                resultText
+            )
         );
-
-        await saveMeasurement({
-            operation_type: 'conversion',
-            unit_type: type,
-            value1: value,
-            unit1: fromUnit,
-            value2: null,
-            unit2: null,
-            result_value: result,
-            result_unit: toUnit
-        });
 
         res.status(200).json({
             success: true,
-            result
+            operation,
+            result: operation === 'COMPARE' ? resultText : result
         });
 
     } catch (error) {
+        await saveMeasurement(
+            buildErrorRecord(operation, req.body, error.message)
+        );
 
-        res.status(500).json({
+        res.status(400).json({
             success: false,
+            error: true,
             message: error.message
         });
     }
+}
+
+async function compareQuantity(req, res) {
+    return handleOperation(req, res, 'COMPARE', input =>
+        quantityService.compare(
+            input.thisQuantityDTO,
+            input.thatQuantityDTO
+        )
+    );
+}
+
+async function convertQuantity(req, res) {
+    return handleOperation(req, res, 'CONVERT', input =>
+        quantityService.convertTo(
+            input.thisQuantityDTO,
+            input.thatQuantityDTO
+        )
+    );
 }
 
 async function addQuantity(req, res) {
+    return handleOperation(req, res, 'ADD', input =>
+        quantityService.add(
+            input.thisQuantityDTO,
+            input.thatQuantityDTO,
+            input.targetQuantityDTO
+        )
+    );
+}
 
-    try {
-
-        const { value1, value2, unit } = req.body;
-
-        const result = addValues(value1, value2);
-
-        await saveMeasurement({
-            operation_type: 'addition',
-            unit_type: unit,
-            value1,
-            unit1: unit,
-            value2,
-            unit2: unit,
-            result_value: result,
-            result_unit: unit
-        });
-
-        res.status(200).json({
-            success: true,
-            result,
-            unit
-        });
-
-    } catch (error) {
-
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+async function addQuantityWithTargetUnit(req, res) {
+    return addQuantity(req, res);
 }
 
 async function subtractQuantity(req, res) {
-
-    try {
-
-        const { value1, value2, unit } = req.body;
-
-        const result = subtractValues(value1, value2);
-
-        await saveMeasurement({
-            operation_type: 'subtraction',
-            unit_type: unit,
-            value1,
-            unit1: unit,
-            value2,
-            unit2: unit,
-            result_value: result,
-            result_unit: unit
-        });
-
-        res.status(200).json({
-            success: true,
-            result,
-            unit
-        });
-
-    } catch (error) {
-
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+    return handleOperation(req, res, 'SUBTRACT', input =>
+        quantityService.subtract(
+            input.thisQuantityDTO,
+            input.thatQuantityDTO,
+            input.targetQuantityDTO
+        )
+    );
 }
 
-async function getHistory(req, res) {
+async function subtractQuantityWithTargetUnit(req, res) {
+    return subtractQuantity(req, res);
+}
 
-    try {
+async function divideQuantity(req, res) {
+    return handleOperation(req, res, 'DIVIDE', input =>
+        quantityService.divide(
+            input.thisQuantityDTO,
+            input.thatQuantityDTO
+        )
+    );
+}
 
-        const data = await getAllMeasurements();
+async function getAllHistory(req, res) {
+    const data = await getAllMeasurements();
 
-        res.status(200).json({
-            success: true,
-            data
-        });
+    res.status(200).json({
+        success: true,
+        data
+    });
+}
 
-    } catch (error) {
+async function getHistoryByOperation(req, res) {
+    const { operation } = req.params;
 
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+    const data = await getOperationHistory(operation.toUpperCase());
+
+    res.status(200).json({
+        success: true,
+        data
+    });
+}
+
+async function getHistoryByType(req, res) {
+    const { type } = req.params;
+
+    const data = await getMeasurementsByType(type);
+
+    res.status(200).json({
+        success: true,
+        data
+    });
+}
+
+async function getCountByOperation(req, res) {
+    const { operation } = req.params;
+
+    const count = await getOperationCount(operation.toUpperCase());
+
+    res.status(200).json({
+        success: true,
+        operation: operation.toUpperCase(),
+        count
+    });
+}
+
+async function getErroredOperations(req, res) {
+    const data = await getErrorHistory();
+
+    res.status(200).json({
+        success: true,
+        data
+    });
 }
 
 module.exports = {
+    compareQuantity,
     convertQuantity,
     addQuantity,
+    addQuantityWithTargetUnit,
     subtractQuantity,
-    getHistory
+    subtractQuantityWithTargetUnit,
+    divideQuantity,
+    getAllHistory,
+    getHistoryByOperation,
+    getHistoryByType,
+    getCountByOperation,
+    getErroredOperations
 };
