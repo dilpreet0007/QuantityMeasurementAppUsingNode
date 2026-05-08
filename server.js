@@ -2,27 +2,18 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
-const db = require('./config/db');
+
+const quantityRoutes = require('./routes/quantityRoutes');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.get('/', async (req, res) => {
+app.use('/api/quantity', quantityRoutes);
 
-    try {
-
-        const connection = await db.getConnection();
-
-        res.send('Database Connected Successfully');
-
-        connection.release();
-
-    } catch (error) {
-
-        res.status(500).send(error.message);
-    }
+app.get('/', (req, res) => {
+    res.send('Quantity Measurement API Running');
 });
 
 const PORT = process.env.PORT || 5000;
