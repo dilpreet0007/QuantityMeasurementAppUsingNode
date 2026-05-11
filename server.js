@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 
 const quantityRoutes = require('./routes/quantityRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/quantities', quantityRoutes);
 
 app.get('/', (req, res) => {
