@@ -15,7 +15,11 @@ const {
     getErroredOperations
 } = require('../controllers/quantityController');
 
+const authMiddleware = require('../middleware/authMiddleware');
+
 const router = express.Router();
+
+router.use(authMiddleware);
 
 router.post('/compare', compareQuantity);
 
